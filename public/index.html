@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Price tags" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#234237" />
+    <title>Price tags</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="icon" href="/icon-192.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">Stokes</p>
+      <h1>Price tags</h1>
+      <nav>
+        <a href="#scan">Scan</a>
+        <a href="#list">List</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="scan">
+        <h2>Find a product</h2>
+        <label class="code-label" for="code">Barcode or 8-digit number</label>
+        <div class="code-row">
+          <input id="code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="880369836232 or 10707621" />
+          <button id="lookup" type="button">Look up</button>
+        </div>
+        <p id="status" role="status"></p>
+        <button id="camera" type="button" class="secondary">Start camera</button>
+        <div id="reader"></div>
+      </section>
+
+      <section id="match" hidden>
+        <h2>Match</h2>
+        <div id="picker" hidden></div>
+        <article id="match-card" hidden>
+          <p class="label">Website name</p>
+          <h3 data-field="name"></h3>
+          <p class="meta">Barcode <span data-field="sku"></span> · Tag <span data-field="upc"></span></p>
+          <p class="prices">
+            <span>Regular <strong data-field="regular"></strong></span>
+            <span>Final <strong data-field="final"></strong></span>
+          </p>
+          <p class="note" data-field="hint">Type line 1 and line 2. Nothing was filled in for this name.</p>
+          <label class="line">Line 1 <input data-field="line1" type="text" maxlength="80" autocomplete="off" /></label>
+          <label class="line">Line 2 <input data-field="line2" type="text" maxlength="80" autocomplete="off" /></label>
+          <button id="save" type="button">Save to list</button>
+        </article>
+      </section>
+
+      <section id="list">
+        <h2>List</h2>
+        <p id="empty" class="note">Saved tags stay on this phone. Clearing website data clears the list.</p>
+        <div id="list-items"></div>
+        <div class="download-bar">
+          <p id="count"></p>
+          <button id="download" type="button">Download Excel</button>
+          <p class="note">The sheet prints the regular price. 18 tags per sheet.</p>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
