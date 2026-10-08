@@ -108,8 +108,6 @@ function showMatch(product) {
   const line2 = matchCard.querySelector('[data-field="line2"]');
   line1.value = lines.line1;
   line2.value = lines.line2;
-  const hint = matchCard.querySelector('[data-field="hint"]');
-  hint.hidden = Boolean(lines.line1 || lines.line2);
   matchEl.scrollIntoView({ block: "nearest" });
 }
 
@@ -259,7 +257,7 @@ function field(labelText, value, onInput) {
   const input = document.createElement("input");
   input.type = "text";
   input.value = value || "";
-  input.maxLength = 80;
+  input.maxLength = 200;
   input.autocomplete = "off";
   input.addEventListener("input", () => onInput(input.value));
   label.append(span, input);
