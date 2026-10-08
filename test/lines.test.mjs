@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { linesFor } from "../src/lines.mjs";
 
-test("thinkkitchen and thinkitchen with a series name", () => {
+test("thinkkitchen and thinkitchen put the model word on line 1", () => {
+  assert.deepEqual(
+    linesFor({ name: "thinkkitchen Milan Tong", sku: "880369005737", upc_e: "10539800" }),
+    { line1: "T.K Milan", line2: "Tong" },
+  );
   assert.deepEqual(linesFor({ name: "thinkitchen Amara Can Opener" }), {
     line1: "T.K Amara",
     line2: "Can Opener",
@@ -19,13 +23,16 @@ test("thinkkitchen and thinkitchen with a series name", () => {
     line1: "T.K Pro-Fit",
     line2: "Blender with 2 Bottles",
   });
+  assert.deepEqual(linesFor({ name: "thinkkitchen Big Spoon" }), {
+    line1: "T.K Big",
+    line2: "Spoon",
+  });
 });
 
-test("a thinkkitchen title with no series word stays blank", () => {
+test("a thinkkitchen title with no model word stays blank", () => {
   for (const name of [
     "thinkkitchen Scissors",
     "thinkkitchen T.K Torch",
-    "thinkkitchen Big Spoon",
     "T.K Avocado Tool",
     "Stokes T.K Linea Pizza Cutter",
     "Ouvre-boîte thinkitchen Amara",

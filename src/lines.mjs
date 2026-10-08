@@ -1,8 +1,6 @@
 // Two-line rules from the price-tag plan. Tags stay English.
 // A name with no matching rule stays blank so nothing is invented.
 
-const SERIES = ["Amara", "Linea", "Casa", "Pro-Fit"];
-
 const CULIN_LINE_1 = "Culin Air";
 const CULIN_LINE_2 = "Digital Air Fryer 3.8 L, 1350 W";
 const CANDLE_NAME = "SCENTED CANDLE BLACK VASE H23CM";
@@ -17,11 +15,14 @@ function normalizeSpaces(value) {
 }
 
 function thinkKitchenLines(name) {
+  // Brand, then one model word, then the product type. Amara and Linea were examples.
+  // A title with only the brand and a product type has no model word.
   const match = normalizeSpaces(name).match(/^(thinkkitchen|thinkitchen)\s+(\S+)\s+(.+)$/i);
   if (!match) return null;
-  const series = SERIES.find((word) => word.toLowerCase() === match[2].toLowerCase());
-  if (!series) return null;
-  return { line1: `T.K ${series}`, line2: match[3] };
+  const model = match[2];
+  // "T.K" in the title is the brand short form, not a model.
+  if (/^t\.?k\.?$/i.test(model)) return null;
+  return { line1: `T.K ${model}`, line2: match[3] };
 }
 
 function dinnerwareLines(name) {
