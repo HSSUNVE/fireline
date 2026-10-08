@@ -56,9 +56,27 @@
       </section>
 
       <section id="list">
-        <h2>List</h2>
-        <p id="empty" class="note">Saved tags stay on this phone. Clearing website data clears the list.</p>
-        <div id="list-items"></div>
+        <div class="list-head">
+          <h2>List</h2>
+          <button id="delete-all" type="button" class="danger">Delete all</button>
+        </div>
+        <p id="empty" class="note">No saved tags.</p>
+        <div id="table-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Line 1</th>
+                <th scope="col">Line 2</th>
+                <th scope="col">Regular price</th>
+                <th scope="col">Selling price</th>
+                <th scope="col">Tag number</th>
+                <th scope="col">Barcode</th>
+                <th scope="col"><span class="sr">Delete</span></th>
+              </tr>
+            </thead>
+            <tbody id="list-items"></tbody>
+          </table>
+        </div>
         <div class="download-bar">
           <p id="count"></p>
           <button id="download" type="button">Download Excel</button>

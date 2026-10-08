@@ -19,8 +19,10 @@ const matchEl = document.querySelector("#match");
 const pickerEl = document.querySelector("#picker");
 const matchCard = document.querySelector("#match-card");
 const listEl = document.querySelector("#list-items");
+const tableWrap = document.querySelector("#table-wrap");
 const countEl = document.querySelector("#count");
 const downloadButton = document.querySelector("#download");
+const deleteAllButton = document.querySelector("#delete-all");
 const emptyEl = document.querySelector("#empty");
 
 let list = loadList();
@@ -56,21 +58,19 @@ function money(value) {
   return Number(value).toFixed(2);
 }
 
-function selectedTags() {
-  return list.filter((item) => item.selected);
-}
-
 function updateCount() {
-  const selected = selectedTags();
-  const sheets = selected.length === 0 ? 0 : Math.ceil(selected.length / TAGS_PER_SHEET);
-  if (selected.length === 0) {
-    countEl.textContent = "Tick the tags to print.";
+  const count = list.length;
+  const sheets = count === 0 ? 0 : Math.ceil(count / TAGS_PER_SHEET);
+  if (count === 0) {
+    countEl.textContent = "No saved tags.";
   } else if (sheets === 1) {
-    countEl.textContent = `${selected.length} tag${selected.length === 1 ? "" : "s"} on 1 sheet.`;
+    countEl.textContent = `${count} tag${count === 1 ? "" : "s"} on 1 sheet.`;
   } else {
-    countEl.textContent = `${selected.length} tags on ${sheets} sheets, ${TAGS_PER_SHEET} per sheet.`;
+    countEl.textContent = `${count} tags on ${sheets} sheets, ${TAGS_PER_SHEET} per sheet.`;
   }
-  emptyEl.hidden = list.length > 0;
+  emptyEl.hidden = count > 0;
+  tableWrap.hidden = count === 0;
+  deleteAllButton.disabled = count === 0;
 }
 
 async function lookup(code) {
@@ -183,7 +183,6 @@ function saveCurrent() {
     url_key: current.url_key || "",
     line1,
     line2,
-    selected: true,
   });
   persist();
   renderList();
@@ -191,77 +190,68 @@ function saveCurrent() {
   document.querySelector("#list").scrollIntoView({ block: "nearest" });
 }
 
+function cellText(text, className) {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function lineCell(item, key) {
+  const cell = document.createElement("td");
+  const input = document.createElement("input");
+  input.type = "text";
+  input.value = item[key] || "";
+  input.maxLength = 200;
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", key === "line1" ? "Line 1" : "Line 2");
+  input.addEventListener("input", () => {
+    item[key] = input.value;
+    persist();
+  });
+  cell.append(input);
+  return cell;
+}
+
 function renderList() {
   listEl.replaceChildren();
-  for (const item of list) {
-    const row = document.createElement("article");
-    row.className = "tag";
-
-    const head = document.createElement("div");
-    head.className = "tag-head";
-    const check = document.createElement("input");
-    check.type = "checkbox";
-    check.checked = Boolean(item.selected);
-    check.setAttribute("aria-label", `Print ${item.name || "tag"}`);
-    check.addEventListener("change", () => {
-      item.selected = check.checked;
-      persist();
-      updateCount();
-    });
-    const name = document.createElement("h3");
-    name.textContent = item.name || "Unnamed product";
-    head.append(check, name);
-
-    const meta = document.createElement("p");
-    meta.className = "meta";
-    meta.textContent = `Barcode ${item.sku || "—"} · Tag ${item.upc_e || "—"}`;
-
-    const prices = document.createElement("p");
-    prices.className = "prices";
-    const regular = document.createElement("span");
-    regular.textContent = `Regular ${money(item.regular_price)}`;
-    const finalPrice = document.createElement("span");
-    finalPrice.textContent = `Final ${money(item.final_price)}`;
-    prices.append(regular, finalPrice);
-
-    const line1 = field("Line 1", item.line1, (value) => {
-      item.line1 = value;
-      persist();
-    });
-    const line2 = field("Line 2", item.line2, (value) => {
-      item.line2 = value;
-      persist();
-    });
-
+  list.forEach((item, index) => {
+    const row = document.createElement("tr");
+    if (item.name) row.title = item.name;
+    row.append(
+      lineCell(item, "line1"),
+      lineCell(item, "line2"),
+      cellText(money(item.regular_price), "num"),
+      cellText(money(item.final_price), "num selling"),
+      cellText(item.upc_e || "—"),
+      cellText(item.sku || "—"),
+    );
+    const action = document.createElement("td");
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.className = "text";
-    remove.textContent = "Remove";
+    remove.className = "row-delete";
+    remove.textContent = "Delete";
     remove.addEventListener("click", () => {
-      list = list.filter((entry) => entry.id !== item.id);
+      list.splice(index, 1);
       persist();
       renderList();
     });
-
-    row.append(head, meta, prices, line1, line2, remove);
+    action.append(remove);
+    row.append(action);
     listEl.append(row);
-  }
+  });
   updateCount();
 }
 
-function field(labelText, value, onInput) {
-  const label = document.createElement("label");
-  label.className = "line";
-  const span = document.createElement("span");
-  span.textContent = labelText;
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = value || "";
-  input.maxLength = 200;
-  input.autocomplete = "off";
-  input.addEventListener("input", () => onInput(input.value));
-  label.append(span, input);
-  return label;
+function deleteAll() {
+  if (list.length === 0) return;
+  const count = list.length;
+  const ok = window.confirm(`Delete all ${count} saved tags?`);
+  if (!ok) return;
+  list = [];
+  persist();
+  renderList();
+  setStatus("Deleted all saved tags.");
 }
 
 async function stopCamera() {
@@ -319,14 +309,14 @@ async function onDecoded(text) {
 }
 
 async function downloadWorkbook() {
-  const tags = selectedTags().map((item) => ({
+  const tags = list.map((item) => ({
     line1: item.line1 || "",
     line2: item.line2 || "",
     regularPrice: item.regular_price,
     upc: item.upc_e || "",
   }));
   if (tags.length === 0) {
-    setStatus("Tick the tags to print.");
+    setStatus("The list is empty.");
     return;
   }
   downloadButton.disabled = true;
@@ -368,6 +358,7 @@ matchCard.querySelector("#save").addEventListener("click", saveCurrent);
 downloadButton.addEventListener("click", () => {
   void downloadWorkbook();
 });
+deleteAllButton.addEventListener("click", deleteAll);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) void stopCamera();
 });
