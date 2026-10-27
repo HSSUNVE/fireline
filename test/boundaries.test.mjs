@@ -17,4 +17,12 @@ test("the phone page does not call Stokes or set workbook layout", () => {
   assert.equal(workbook.includes("customWidth"), false);
   assert.equal(workbook.includes("ht="), false);
   assert.match(client, /\/api\/lookup/);
+  assert.match(client, /fps: 15/);
+  assert.match(client, /useBarCodeDetectorIfSupported: true/);
+  assert.match(client, /width: \{ ideal: 1280 \}/);
+  assert.match(client, /height: \{ ideal: 720 \}/);
+  assert.match(client, /width: 280, height: 140/);
+  assert.match(client, /EAN_13/);
+  assert.match(client, /CODE_128/);
+  assert.equal(client.includes("QR_CODE"), false);
 });
