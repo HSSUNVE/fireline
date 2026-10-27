@@ -278,10 +278,22 @@ async function startCamera() {
     return;
   }
   try {
-    scanner = new Html5Qrcode("reader", { formatsToSupport: FORMATS, verbose: false });
+    scanner = new Html5Qrcode("reader", {
+      formatsToSupport: FORMATS,
+      verbose: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+    });
     await scanner.start(
       { facingMode: "environment" },
-      { fps: 8, qrbox: { width: 240, height: 120 } },
+      {
+        fps: 15,
+        qrbox: { width: 280, height: 140 },
+        videoConstraints: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      },
       (text) => {
         void onDecoded(text);
       },
