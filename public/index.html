@@ -28,13 +28,18 @@
     <main>
       <section id="scan">
         <h2>Find a product</h2>
-        <label class="code-label" for="code">Barcode or 8-digit number</label>
+        <label class="code-label" for="code">Barcode, 8-digit number, or name</label>
         <div class="code-row">
-          <input id="code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="880369836232 or 10707621" />
+          <input id="code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Name, barcode, or 10707621" />
           <button id="lookup" type="button">Look up</button>
         </div>
         <p id="status" role="status"></p>
-        <button id="camera" type="button" class="secondary">Start camera</button>
+        <div class="mode-row">
+          <button id="read-name" type="button">Read the name</button>
+          <button id="camera" type="button" class="secondary">Scan barcode</button>
+        </div>
+        <video id="name-preview" playsinline autoplay muted hidden></video>
+        <button id="capture-name" type="button" hidden>Read this frame</button>
         <div id="reader"></div>
       </section>
 
@@ -42,6 +47,7 @@
         <h2>Match</h2>
         <div id="picker" hidden></div>
         <article id="match-card" hidden>
+          <img data-field="image" class="match-photo" alt="" hidden />
           <p class="label">Website name</p>
           <h3 data-field="name"></h3>
           <p class="meta">Barcode <span data-field="sku"></span> · Tag <span data-field="upc"></span></p>

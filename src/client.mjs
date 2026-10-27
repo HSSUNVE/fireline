@@ -1,6 +1,9 @@
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { linesFor } from "./lines.mjs";
+import { nameFromOcrLines } from "./ocr-name.mjs";
 import { TAGS_PER_SHEET, fillWorkbook } from "./workbook.mjs";
+
+const NAME_READER_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
 
 const STORAGE_KEY = "stokes-price-tags-v1";
 const FORMATS = [
@@ -14,6 +17,9 @@ const FORMATS = [
 const codeInput = document.querySelector("#code");
 const lookupButton = document.querySelector("#lookup");
 const cameraButton = document.querySelector("#camera");
+const readNameButton = document.querySelector("#read-name");
+const captureNameButton = document.querySelector("#capture-name");
+const namePreview = document.querySelector("#name-preview");
 const statusEl = document.querySelector("#status");
 const matchEl = document.querySelector("#match");
 const pickerEl = document.querySelector("#picker");
@@ -28,6 +34,8 @@ const emptyEl = document.querySelector("#empty");
 let list = loadList();
 let scanner = null;
 let cameraOn = false;
+let nameStream = null;
+let nameReader = null;
 let busy = false;
 let current = null;
 
@@ -91,6 +99,18 @@ async function lookup(code) {
   return payload;
 }
 
+function productImage(product) {
+  const raw = typeof product?.image === "string" ? product.image.trim() : "";
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
 function showMatch(product) {
   current = product;
   const lines = linesFor(product);
@@ -99,6 +119,17 @@ function showMatch(product) {
   pickerEl.replaceChildren();
   matchEl.hidden = false;
 
+  const photo = matchCard.querySelector('[data-field="image"]');
+  const image = productImage(product);
+  if (image) {
+    photo.src = image;
+    photo.alt = product.name || "Product photo";
+    photo.hidden = false;
+  } else {
+    photo.removeAttribute("src");
+    photo.alt = "";
+    photo.hidden = true;
+  }
   matchCard.querySelector('[data-field="name"]').textContent = product.name || "Unnamed product";
   matchCard.querySelector('[data-field="sku"]').textContent = product.sku || "—";
   matchCard.querySelector('[data-field="upc"]').textContent = product.upc_e || "—";
@@ -120,18 +151,27 @@ function showPicker(items, total) {
   const note = document.createElement("p");
   note.className = "note";
   note.textContent = total > items.length
-    ? `Showing ${items.length} of ${total}. Type the barcode or the 8-digit number.`
+    ? `Showing ${items.length} of ${total}. Choose one.`
     : "Several products matched. Choose one.";
   pickerEl.append(note);
   for (const product of items) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pick";
+    const image = productImage(product);
+    if (image) {
+      const photo = document.createElement("img");
+      photo.src = image;
+      photo.alt = "";
+      button.append(photo);
+    }
+    const copy = document.createElement("span");
     const name = document.createElement("strong");
     name.textContent = product.name || "Unnamed product";
     const meta = document.createElement("span");
     meta.textContent = `${product.sku || "—"} · ${product.upc_e || "—"} · Regular ${money(product.regular_price)} · Final ${money(product.final_price)}`;
-    button.append(name, meta);
+    copy.append(name, meta);
+    button.append(copy);
     button.addEventListener("click", () => showMatch(product));
     pickerEl.append(button);
   }
@@ -141,7 +181,7 @@ function showPicker(items, total) {
 async function runLookup(code) {
   const trimmed = code.trim();
   if (!trimmed) {
-    setStatus("Enter a barcode or an 8-digit number.");
+    setStatus("Enter a barcode, an 8-digit number, or a product name.");
     return;
   }
   lookupButton.disabled = true;
@@ -155,7 +195,7 @@ async function runLookup(code) {
       setStatus("No product found.");
       return;
     }
-    if (total !== 1) {
+    if (items.length !== 1 || total !== 1) {
       setStatus("");
       showPicker(items, total);
       return;
@@ -256,7 +296,7 @@ function deleteAll() {
 
 async function stopCamera() {
   cameraOn = false;
-  cameraButton.textContent = "Start camera";
+  cameraButton.textContent = "Scan barcode";
   if (!scanner) return;
   const currentScanner = scanner;
   scanner = null;
@@ -268,11 +308,138 @@ async function stopCamera() {
   }
 }
 
+function loadNameReader() {
+  if (globalThis.Tesseract) return Promise.resolve(globalThis.Tesseract);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = NAME_READER_URL;
+    script.async = true;
+    script.onload = () => {
+      if (globalThis.Tesseract) resolve(globalThis.Tesseract);
+      else reject(new Error("The name reader did not load."));
+    };
+    script.onerror = () => reject(new Error("The name reader did not load."));
+    document.head.appendChild(script);
+  });
+}
+
+async function linesFromBuiltInReader(canvas) {
+  const Detector = globalThis.TextDetector;
+  if (typeof Detector !== "function") return null;
+  let detector;
+  try {
+    if (typeof Detector.create === "function") {
+      detector = await Detector.create({ languages: ["en", "fr"] });
+    } else {
+      detector = new Detector();
+    }
+    const found = await detector.detect(canvas);
+    if (!Array.isArray(found)) return null;
+    const sorted = [...found].sort((a, b) => (a.boundingBox?.y ?? 0) - (b.boundingBox?.y ?? 0));
+    return sorted.map((item) => item.rawValue || "");
+  } catch {
+    return null;
+  }
+}
+
+async function linesFromBackupReader(canvas) {
+  if (!nameReader) setStatus("Loading the name reader…");
+  const reader = await loadNameReader();
+  if (!nameReader) {
+    nameReader = await reader.createWorker("eng");
+    await nameReader.setParameters({ tessedit_pageseg_mode: "6" });
+  }
+  setStatus("Reading the name…");
+  const { data } = await nameReader.recognize(canvas);
+  return String(data?.text || "").split(/\n+/);
+}
+
+async function readPrintedName() {
+  if (!namePreview.videoWidth) throw new Error("The camera picture is not ready.");
+  const longest = Math.max(namePreview.videoWidth, namePreview.videoHeight);
+  const scale = Math.min(1, 1000 / longest);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(namePreview.videoWidth * scale));
+  canvas.height = Math.max(1, Math.round(namePreview.videoHeight * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(namePreview, 0, 0, canvas.width, canvas.height);
+  const builtIn = await linesFromBuiltInReader(canvas);
+  const lines = builtIn && nameFromOcrLines(builtIn)
+    ? builtIn
+    : await linesFromBackupReader(canvas);
+  return nameFromOcrLines(lines);
+}
+
+async function stopNameCamera() {
+  if (nameStream) {
+    for (const track of nameStream.getTracks()) track.stop();
+    nameStream = null;
+  }
+  namePreview.srcObject = null;
+  namePreview.hidden = true;
+  captureNameButton.hidden = true;
+  readNameButton.textContent = "Read the name";
+}
+
+async function startNameCamera() {
+  if (nameStream) {
+    await stopNameCamera();
+    return;
+  }
+  await stopCamera();
+  if (!window.isSecureContext) {
+    setStatus("The camera needs HTTPS. On this computer, use localhost. On the phone, use the HTTPS site.");
+    return;
+  }
+  try {
+    nameStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    });
+    namePreview.srcObject = nameStream;
+    namePreview.hidden = false;
+    captureNameButton.hidden = false;
+    readNameButton.textContent = "Stop name camera";
+    setStatus("Point the camera at the product name, then read this frame.");
+    await namePreview.play();
+  } catch {
+    await stopNameCamera();
+    setStatus("The camera did not start. Type the name or scan the barcode.");
+  }
+}
+
+async function captureName() {
+  if (busy || !nameStream) return;
+  busy = true;
+  captureNameButton.disabled = true;
+  setStatus("Reading the name…");
+  try {
+    const name = await readPrintedName();
+    if (!name) {
+      setStatus("No name was read. Hold the tag steady and try again.");
+      return;
+    }
+    codeInput.value = name;
+    await stopNameCamera();
+    await runLookup(name);
+  } catch (error) {
+    setStatus(error.message || "The name was not read.");
+  } finally {
+    busy = false;
+    captureNameButton.disabled = false;
+  }
+}
+
 async function startCamera() {
   if (cameraOn) {
     await stopCamera();
     return;
   }
+  await stopNameCamera();
   if (!window.isSecureContext) {
     setStatus("The camera needs HTTPS. On this computer, use localhost. On the phone, use the HTTPS site.");
     return;
@@ -304,7 +471,7 @@ async function startCamera() {
     setStatus("");
   } catch {
     await stopCamera();
-    setStatus("The camera did not start. Type the barcode or the 8-digit number.");
+    setStatus("The camera did not start. Type the name or scan the barcode.");
   }
 }
 
@@ -366,13 +533,22 @@ codeInput.addEventListener("keydown", (event) => {
 cameraButton.addEventListener("click", () => {
   void startCamera();
 });
+readNameButton.addEventListener("click", () => {
+  void startNameCamera();
+});
+captureNameButton.addEventListener("click", () => {
+  void captureName();
+});
 matchCard.querySelector("#save").addEventListener("click", saveCurrent);
 downloadButton.addEventListener("click", () => {
   void downloadWorkbook();
 });
 deleteAllButton.addEventListener("click", deleteAll);
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) void stopCamera();
+  if (document.hidden) {
+    void stopCamera();
+    void stopNameCamera();
+  }
 });
 
 renderList();

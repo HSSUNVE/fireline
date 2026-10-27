@@ -44,6 +44,31 @@ const shanti = {
   },
 };
 
+test("the picture comes from small_image, then thumbnail", async () => {
+  const withBoth = mockFetch({
+    "search:en:Milan Tong": [{
+      ...shanti,
+      name: "thinkkitchen Milan Tong",
+      small_image: { url: "https://www.stokesstores.com/media/catalog/product/small.jpg" },
+      thumbnail: { url: "https://www.stokesstores.com/media/catalog/product/thumb.jpg" },
+    }],
+  });
+  const found = await lookupCode("Milan Tong", withBoth.fetchImpl);
+  assert.equal(found.items[0].image, "https://www.stokesstores.com/media/catalog/product/small.jpg");
+  assert.match(withBoth.calls[0].body.query, /small_image/);
+  assert.equal(withBoth.calls[0].store, "en");
+
+  const thumbOnly = mockFetch({
+    "search:en:bowl": [{
+      name: "Glass Bowl",
+      sku: "1",
+      thumbnail: { url: "/media/catalog/product/bowl.jpg" },
+    }],
+  });
+  const named = await lookupCode("bowl", thumbOnly.fetchImpl);
+  assert.equal(named.items[0].image, "https://www.stokesstores.com/media/catalog/product/bowl.jpg");
+});
+
 test("sku hit stops before search, and French search runs only after an empty English search", async () => {
   const hit = mockFetch({ "sku:880369836232": [shanti] });
   const found = await lookupCode("880369836232", hit.fetchImpl);

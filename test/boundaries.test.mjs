@@ -10,13 +10,14 @@ test("the phone page does not call Stokes or set workbook layout", () => {
   for (const source of [client, html]) {
     assert.equal(source.includes("stokesstores.com"), false);
     assert.equal(source.includes("adobe.io"), false);
-    assert.equal(source.includes("tesseract"), false);
   }
+  assert.equal(html.includes("tesseract"), false);
   assert.equal(workbook.includes("Calibri"), false);
   assert.equal(workbook.includes("pageSetup"), false);
   assert.equal(workbook.includes("customWidth"), false);
   assert.equal(workbook.includes("ht="), false);
   assert.match(client, /\/api\/lookup/);
+  assert.match(client, /TextDetector/);
   assert.match(client, /fps: 15/);
   assert.match(client, /useBarCodeDetectorIfSupported: true/);
   assert.match(client, /width: \{ ideal: 1280 \}/);
