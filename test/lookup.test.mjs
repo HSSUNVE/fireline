@@ -44,6 +44,46 @@ const shanti = {
   },
 };
 
+test("the picture comes from small_image, then thumbnail", async () => {
+  const withBoth = mockFetch({
+    "sku:880369836232": [{
+      ...shanti,
+      small_image: { url: "https://www.stokesstores.com/media/catalog/product/small.jpg" },
+      thumbnail: { url: "https://www.stokesstores.com/media/catalog/product/thumb.jpg" },
+    }],
+  });
+  const found = await lookupCode("880369836232", withBoth.fetchImpl);
+  assert.equal(found.items[0].image, "https://www.stokesstores.com/media/catalog/product/small.jpg");
+  assert.match(withBoth.calls[0].body.query, /small_image/);
+  assert.match(withBoth.calls[0].body.query, /thumbnail/);
+  assert.equal(withBoth.calls[0].store, "en");
+
+  const thumbOnly = mockFetch({
+    "search:en:bowl": [{
+      name: "Glass Bowl",
+      sku: "10707621",
+      upc_e: "10707621",
+      thumbnail: { url: "/media/catalog/product/bowl.jpg" },
+      price_range: { maximum_price: { regular_price: { value: 4 }, final_price: { value: 3 } } },
+    }],
+  });
+  const named = await lookupCode("bowl", thumbOnly.fetchImpl);
+  assert.equal(named.items.length, 1);
+  assert.equal(named.items[0].image, "https://www.stokesstores.com/media/catalog/product/bowl.jpg");
+  assert.deepEqual(thumbOnly.calls.map((call) => call.store), ["en"]);
+
+  const blocked = mockFetch({
+    "search:en:bad": [{
+      name: "Bad",
+      sku: "1",
+      small_image: { url: "javascript:alert(1)" },
+      thumbnail: { url: "https://cdn.example/ok.jpg" },
+    }],
+  });
+  const safe = await lookupCode("bad", blocked.fetchImpl);
+  assert.equal(safe.items[0].image, "https://cdn.example/ok.jpg");
+});
+
 test("sku hit stops before search, and French search runs only after an empty English search", async () => {
   const hit = mockFetch({ "sku:880369836232": [shanti] });
   const found = await lookupCode("880369836232", hit.fetchImpl);

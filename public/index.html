@@ -28,9 +28,9 @@
     <main>
       <section id="scan">
         <h2>Find a product</h2>
-        <label class="code-label" for="code">Barcode or 8-digit number</label>
+        <label class="code-label" for="code">Barcode, 8-digit number, or name</label>
         <div class="code-row">
-          <input id="code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="880369836232 or 10707621" />
+          <input id="code" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Milan Tong, 880369836232, or 10707621" />
           <button id="lookup" type="button">Look up</button>
         </div>
         <p id="status" role="status"></p>
@@ -42,6 +42,7 @@
         <h2>Match</h2>
         <div id="picker" hidden></div>
         <article id="match-card" hidden>
+          <img data-field="image" class="match-photo" alt="" hidden />
           <p class="label">Website name</p>
           <h3 data-field="name"></h3>
           <p class="meta">Barcode <span data-field="sku"></span> · Tag <span data-field="upc"></span></p>
@@ -51,7 +52,10 @@
           </p>
           <label class="line">Line 1 <input data-field="line1" type="text" maxlength="200" autocomplete="off" /></label>
           <label class="line">Line 2 <input data-field="line2" type="text" maxlength="200" autocomplete="off" /></label>
-          <button id="save" type="button">Save to list</button>
+          <div class="match-actions">
+            <button id="save" type="button">Save to list</button>
+            <button id="skip" type="button" class="skip">Skip</button>
+          </div>
         </article>
       </section>
 

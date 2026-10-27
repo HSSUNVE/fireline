@@ -2,7 +2,7 @@
 
 A mobile website for shelf tags. Open it in Safari and use Add to Home Screen. It is still a website: no App Store build and no native app.
 
-The phone calls `POST /api/lookup` on this same site. That route asks Stokes for one product and returns the name, barcode (`sku`), 8-digit tag number (`upc_e`), regular price, and final price. The list shows both prices. The Excel file prints the regular price only.
+The phone calls `POST /api/lookup` on this same site. That route asks the English Stokes store for a product and returns the name, barcode (`sku`), 8-digit tag number (`upc_e`), regular price, final price, and the picture URL (`small_image`, or `thumbnail` when that is the one the site sent). A barcode, an 8-digit number, or a product name all use that same lookup. Several name matches stay a list with photos: add one to the saved list, or skip it. The Excel file prints the regular price only.
 
 ## Run it on your computer
 
@@ -31,4 +31,4 @@ Use Cloudflare Pages on the free plan. Do not add a credit card. A `pages.dev` a
 6. Leave environment variables empty. Do not paste an Adobe key. The proxy is `functions/api/lookup.js`, and Pages serves it on the same hostname as the site.
 7. Deploy. Open the `https://….pages.dev` link in Safari on the iPhone, allow the camera, then Share → **Add to Home Screen**.
 
-The workbook he downloads is a filled copy of `template/petites-affiches.xlsx`. Line 1 and line 2 keep the fonts already in that file. More than 18 selected tags adds another sheet copied from that template.
+The workbook he downloads is a filled copy of `template/petites-affiches.xlsx`. Line 1 and line 2 keep the fonts already in that file. More than 18 tags adds another sheet copied from that template.

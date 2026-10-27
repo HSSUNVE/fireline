@@ -57,7 +57,21 @@ test("the proxy returns one product for the three sample tag numbers", { timeout
     assert.equal(item.upc_e, want.upc_e);
     assert.equal(item.regular_price, want.regular_price);
     assert.equal(typeof item.final_price, "number");
+    assert.match(item.image, /^https:\/\//);
   }
+});
+
+test("a product name stays a list of English matches with photos", { timeout: 30_000 }, async () => {
+  const payload = await lookup("thinkkitchen Scissors");
+  assert.ok(payload.items.length > 1, JSON.stringify(payload.items.map((item) => item.name)));
+  assert.ok(payload.total_count > 1);
+  for (const item of payload.items) {
+    assert.ok(item.name);
+    assert.match(item.image, /^https:\/\//);
+  }
+  const exact = payload.items.find((item) => item.name === "thinkkitchen Scissors");
+  assert.ok(exact);
+  assert.equal(exact.sku, "880369005034");
 });
 
 test("a 13-digit code with a leading zero finds the 12-digit sku", { timeout: 30_000 }, async () => {

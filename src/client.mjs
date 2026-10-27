@@ -91,6 +91,37 @@ async function lookup(code) {
   return payload;
 }
 
+function productImage(product) {
+  const raw = typeof product?.image === "string" ? product.image.trim() : "";
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function addProduct(product, lines) {
+  const filled = lines || linesFor(product);
+  list.push({
+    id: crypto.randomUUID(),
+    name: product.name || "",
+    sku: product.sku || "",
+    upc_e: product.upc_e || "",
+    regular_price: product.regular_price,
+    final_price: product.final_price,
+    url_key: product.url_key || "",
+    image: productImage(product),
+    line1: filled.line1,
+    line2: filled.line2,
+  });
+  persist();
+  renderList();
+  setStatus("Saved on this phone.");
+}
+
 function showMatch(product) {
   current = product;
   const lines = linesFor(product);
@@ -99,6 +130,17 @@ function showMatch(product) {
   pickerEl.replaceChildren();
   matchEl.hidden = false;
 
+  const photo = matchCard.querySelector('[data-field="image"]');
+  const image = productImage(product);
+  if (image) {
+    photo.src = image;
+    photo.alt = product.name || "Product photo";
+    photo.hidden = false;
+  } else {
+    photo.removeAttribute("src");
+    photo.alt = "";
+    photo.hidden = true;
+  }
   matchCard.querySelector('[data-field="name"]').textContent = product.name || "Unnamed product";
   matchCard.querySelector('[data-field="sku"]').textContent = product.sku || "—";
   matchCard.querySelector('[data-field="upc"]').textContent = product.upc_e || "—";
@@ -111,6 +153,60 @@ function showMatch(product) {
   matchEl.scrollIntoView({ block: "nearest" });
 }
 
+function pickerRow(product) {
+  const row = document.createElement("article");
+  row.className = "pick";
+  const image = productImage(product);
+  if (image) {
+    const photo = document.createElement("img");
+    photo.src = image;
+    photo.alt = product.name || "Product photo";
+    row.append(photo);
+  } else {
+    const blank = document.createElement("span");
+    blank.className = "no-photo";
+    blank.textContent = "No photo";
+    row.append(blank);
+  }
+
+  const copy = document.createElement("div");
+  const name = document.createElement("strong");
+  name.textContent = product.name || "Unnamed product";
+  const meta = document.createElement("span");
+  meta.textContent = `${product.sku || "—"} · ${product.upc_e || "—"} · Regular ${money(product.regular_price)} · Final ${money(product.final_price)}`;
+  const lines = linesFor(product);
+  const preview = document.createElement("span");
+  preview.className = "lines-preview";
+  preview.textContent = lines.line2 ? `${lines.line1} / ${lines.line2}` : lines.line1;
+
+  const actions = document.createElement("div");
+  actions.className = "pick-actions";
+  const add = document.createElement("button");
+  add.type = "button";
+  add.textContent = "Add";
+  add.addEventListener("click", () => {
+    addProduct(product, lines);
+    add.disabled = true;
+    add.textContent = "Added";
+  });
+  const skip = document.createElement("button");
+  skip.type = "button";
+  skip.className = "skip";
+  skip.textContent = "Skip";
+  skip.addEventListener("click", () => {
+    row.remove();
+    if (!pickerEl.querySelector(".pick")) {
+      pickerEl.hidden = true;
+      if (matchCard.hidden) matchEl.hidden = true;
+      setStatus("Skipped.");
+    }
+  });
+  actions.append(add, skip);
+  copy.append(name, meta, preview, actions);
+  row.append(copy);
+  return row;
+}
+
 function showPicker(items, total) {
   current = null;
   matchCard.hidden = true;
@@ -120,28 +216,25 @@ function showPicker(items, total) {
   const note = document.createElement("p");
   note.className = "note";
   note.textContent = total > items.length
-    ? `Showing ${items.length} of ${total}. Type the barcode or the 8-digit number.`
-    : "Several products matched. Choose one.";
+    ? `Showing ${items.length} of ${total}. Add one, or skip it.`
+    : "Several products matched. Add one, or skip it.";
   pickerEl.append(note);
-  for (const product of items) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "pick";
-    const name = document.createElement("strong");
-    name.textContent = product.name || "Unnamed product";
-    const meta = document.createElement("span");
-    meta.textContent = `${product.sku || "—"} · ${product.upc_e || "—"} · Regular ${money(product.regular_price)} · Final ${money(product.final_price)}`;
-    button.append(name, meta);
-    button.addEventListener("click", () => showMatch(product));
-    pickerEl.append(button);
-  }
+  for (const product of items) pickerEl.append(pickerRow(product));
   matchEl.scrollIntoView({ block: "nearest" });
+}
+
+function skipMatch() {
+  current = null;
+  matchCard.hidden = true;
+  if (!pickerEl.hidden && pickerEl.querySelector(".pick")) return;
+  pickerEl.hidden = true;
+  matchEl.hidden = true;
 }
 
 async function runLookup(code) {
   const trimmed = code.trim();
   if (!trimmed) {
-    setStatus("Enter a barcode or an 8-digit number.");
+    setStatus("Enter a barcode, an 8-digit number, or a product name.");
     return;
   }
   lookupButton.disabled = true;
@@ -155,7 +248,7 @@ async function runLookup(code) {
       setStatus("No product found.");
       return;
     }
-    if (total !== 1) {
+    if (items.length !== 1 || total !== 1) {
       setStatus("");
       showPicker(items, total);
       return;
@@ -181,6 +274,7 @@ function saveCurrent() {
     regular_price: current.regular_price,
     final_price: current.final_price,
     url_key: current.url_key || "",
+    image: productImage(current),
     line1,
     line2,
   });
@@ -292,7 +386,7 @@ async function startCamera() {
     setStatus("");
   } catch {
     await stopCamera();
-    setStatus("The camera did not start. Type the barcode or the 8-digit number.");
+    setStatus("The camera did not start. Type a barcode, an 8-digit number, or a product name.");
   }
 }
 
@@ -355,6 +449,7 @@ cameraButton.addEventListener("click", () => {
   void startCamera();
 });
 matchCard.querySelector("#save").addEventListener("click", saveCurrent);
+matchCard.querySelector("#skip").addEventListener("click", skipMatch);
 downloadButton.addEventListener("click", () => {
   void downloadWorkbook();
 });

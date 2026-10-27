@@ -2,12 +2,15 @@
 // This file is the only place that talks to Stokes. No Adobe catalog key.
 
 const ENDPOINT = "https://www.stokesstores.com/graphql";
+const SITE = "https://www.stokesstores.com/";
 
 const ITEM_FIELDS = `
   name
   sku
   upc_e
   url_key
+  small_image { url }
+  thumbnail { url }
   price_range {
     maximum_price {
       regular_price { value }
@@ -60,6 +63,21 @@ function asNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function imageUrl(item) {
+  const candidates = [item?.small_image?.url, item?.thumbnail?.url];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" || !candidate.trim()) continue;
+    try {
+      const url = new URL(candidate.trim(), SITE);
+      if (url.protocol !== "https:" && url.protocol !== "http:") continue;
+      return url.href;
+    } catch {
+      // The next candidate may still be a real picture.
+    }
+  }
+  return "";
+}
+
 function mapItem(item) {
   const max = item?.price_range?.maximum_price;
   return {
@@ -69,6 +87,7 @@ function mapItem(item) {
     regular_price: asNumber(max?.regular_price?.value),
     final_price: asNumber(max?.final_price?.value),
     url_key: item?.url_key == null ? "" : String(item.url_key),
+    image: imageUrl(item),
   };
 }
 
@@ -115,7 +134,7 @@ export async function lookupCode(code, fetchImpl = globalThis.fetch) {
 
 export async function handleLookup(request, deps = {}) {
   if (request.method !== "POST") {
-    return Response.json({ error: "POST a barcode or an 8-digit number." }, { status: 405 });
+    return Response.json({ error: "POST a barcode, an 8-digit number, or a product name." }, { status: 405 });
   }
 
   let payload;
@@ -126,9 +145,9 @@ export async function handleLookup(request, deps = {}) {
   }
 
   const code = typeof payload?.code === "string" ? payload.code.trim() : "";
-  if (!code || code.length > 80) {
+  if (!code || code.length > 120) {
     return Response.json(
-      { error: "Enter one barcode or one 8-digit number." },
+      { error: "Enter one barcode, one 8-digit number, or a product name." },
       { status: 400 },
     );
   }

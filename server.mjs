@@ -90,7 +90,7 @@ export function startServer({ port = 0, host = "127.0.0.1" } = {}) {
     if (url.pathname === "/api/lookup") {
       if (req.method !== "POST") {
         res.writeHead(405, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ error: "POST a barcode or an 8-digit number." }));
+        res.end(JSON.stringify({ error: "POST a barcode, an 8-digit number, or a product name." }));
         return;
       }
       await sendLookup(req, res);
