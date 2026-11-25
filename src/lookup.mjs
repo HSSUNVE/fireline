@@ -118,6 +118,11 @@ export async function handleLookup(request, deps = {}) {
     return Response.json({ error: "POST a barcode or an 8-digit number." }, { status: 405 });
   }
 
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > 10_000) {
+    return Response.json({ error: "Send JSON with a code." }, { status: 400 });
+  }
+
   let payload;
   try {
     payload = await request.json();
