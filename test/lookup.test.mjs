@@ -80,4 +80,15 @@ test("the route accepts one code and does not forward a client query", async () 
 
   const get = await handleLookup(new Request("http://tags.local/api/lookup"));
   assert.equal(get.status, 405);
+
+  const huge = await handleLookup(new Request("http://tags.local/api/lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Content-Length": "20000" },
+    body: JSON.stringify({ code: "club" }),
+  }));
+  assert.equal(huge.status, 400);
+
+  const { POST } = await import("../api/lookup.js");
+  const posted = await POST(new Request("http://tags.local/api/lookup"));
+  assert.equal(posted.status, 405);
 });
