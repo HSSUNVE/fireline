@@ -114,17 +114,60 @@ button:disabled { opacity: 0.6; }
 
 .line { margin: 0.55rem 0; }
 
+.picker-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.picker-actions button { flex: 1; }
+
+.picker-actions button.secondary {
+  width: auto;
+  margin-top: 0;
+  background: transparent;
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+
 .pick {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0.75rem;
   width: 100%;
   margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 500;
   text-align: left;
 }
 
-.pick span { font-weight: 500; font-size: 0.85rem; }
+.pick input {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0.15rem 0 0;
+  flex: none;
+  accent-color: var(--green);
+}
+
+.pick-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pick strong { font-size: 1rem; }
+
+.pick-copy span {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
 
 .list-head {
   display: flex;

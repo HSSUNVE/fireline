@@ -111,30 +111,105 @@ function showMatch(product) {
   matchEl.scrollIntoView({ block: "nearest" });
 }
 
+function tagFrom(product, lines) {
+  return {
+    id: crypto.randomUUID(),
+    name: product.name || "",
+    sku: product.sku || "",
+    upc_e: product.upc_e || "",
+    regular_price: product.regular_price,
+    final_price: product.final_price,
+    url_key: product.url_key || "",
+    line1: lines.line1,
+    line2: lines.line2,
+  };
+}
+
+function addProducts(products) {
+  for (const product of products) {
+    list.push(tagFrom(product, linesFor(product)));
+  }
+  persist();
+  renderList();
+}
+
 function showPicker(items, total) {
   current = null;
   matchCard.hidden = true;
   matchEl.hidden = false;
   pickerEl.hidden = false;
   pickerEl.replaceChildren();
+
   const note = document.createElement("p");
   note.className = "note";
   note.textContent = total > items.length
-    ? `Showing ${items.length} of ${total}. Type the barcode or the 8-digit number.`
-    : "Several products matched. Choose one.";
+    ? `Showing ${items.length} of ${total}. Select the ones to add.`
+    : "Several products matched. Select the ones to add.";
   pickerEl.append(note);
-  for (const product of items) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "pick";
+
+  const actions = document.createElement("div");
+  actions.className = "picker-actions";
+  const selectAll = document.createElement("button");
+  selectAll.type = "button";
+  selectAll.className = "secondary";
+  selectAll.textContent = "Select all";
+  const addSelected = document.createElement("button");
+  addSelected.type = "button";
+  addSelected.textContent = "Add selected";
+  addSelected.disabled = true;
+  actions.append(selectAll, addSelected);
+  pickerEl.append(actions);
+
+  const rows = items.map((product) => {
+    const label = document.createElement("label");
+    label.className = "pick";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    const copy = document.createElement("span");
+    copy.className = "pick-copy";
     const name = document.createElement("strong");
     name.textContent = product.name || "Unnamed product";
     const meta = document.createElement("span");
     meta.textContent = `${product.sku || "—"} · ${product.upc_e || "—"} · Regular ${money(product.regular_price)} · Final ${money(product.final_price)}`;
-    button.append(name, meta);
-    button.addEventListener("click", () => showMatch(product));
-    pickerEl.append(button);
+    copy.append(name, meta);
+    label.append(box, copy);
+    pickerEl.append(label);
+    return { box, product };
+  });
+
+  function chosen() {
+    return rows.filter((row) => row.box.checked).map((row) => row.product);
   }
+
+  function refreshActions() {
+    const count = chosen().length;
+    const allOn = rows.length > 0 && count === rows.length;
+    addSelected.disabled = count === 0;
+    addSelected.textContent = count === 0 ? "Add selected" : `Add selected (${count})`;
+    selectAll.textContent = allOn ? "Clear" : "Select all";
+  }
+
+  for (const row of rows) {
+    row.box.addEventListener("change", refreshActions);
+  }
+
+  selectAll.addEventListener("click", () => {
+    const allOn = rows.every((row) => row.box.checked);
+    for (const row of rows) row.box.checked = !allOn;
+    refreshActions();
+  });
+
+  addSelected.addEventListener("click", () => {
+    const products = chosen();
+    if (products.length === 0) return;
+    addProducts(products);
+    for (const row of rows) row.box.checked = false;
+    refreshActions();
+    const noun = products.length === 1 ? "tag" : "tags";
+    setStatus(`Added ${products.length} ${noun}.`);
+    document.querySelector("#list").scrollIntoView({ block: "nearest" });
+  });
+
   matchEl.scrollIntoView({ block: "nearest" });
 }
 
@@ -173,17 +248,7 @@ function saveCurrent() {
   if (!current) return;
   const line1 = matchCard.querySelector('[data-field="line1"]').value;
   const line2 = matchCard.querySelector('[data-field="line2"]').value;
-  list.push({
-    id: crypto.randomUUID(),
-    name: current.name || "",
-    sku: current.sku || "",
-    upc_e: current.upc_e || "",
-    regular_price: current.regular_price,
-    final_price: current.final_price,
-    url_key: current.url_key || "",
-    line1,
-    line2,
-  });
+  list.push(tagFrom(current, { line1, line2 }));
   persist();
   renderList();
   setStatus("Saved on this phone.");
