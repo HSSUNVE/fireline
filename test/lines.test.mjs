@@ -38,8 +38,8 @@ test("a long thinkkitchen name wraps at a word that fits the narrow tag", () => 
     line2: "Press",
   });
   assert.deepEqual(linesFor({ name: "thinkitchen Pro-Fit Blender with 2 Bottles" }), {
-    line1: "T.K Pro-Fit Blender",
-    line2: "with 2 Bottles",
+    line1: "T.K Pro-Fit",
+    line2: "Blender with 2 Bottles",
   });
 });
 
@@ -53,8 +53,8 @@ test("dinnerware, the candle, and Culin Air stay on their exact lines", () => {
     line2: "12 pc dinner ware",
   });
   assert.deepEqual(linesFor({ name: "SCENTED CANDLE BLACK VASE H23CM" }), {
-    line1: "SCENTED CANDLE",
-    line2: "BLACK VASE H23CM",
+    line1: "SCENTED",
+    line2: "CANDLE BLACK VASE H23CM",
   });
   const culin = {
     line1: "Culin Air",
@@ -81,12 +81,12 @@ test("other English names are wrapped and never left blank", () => {
     line2: "",
   });
   assert.deepEqual(linesFor({ name: "Stokes Something Else" }), {
-    line1: "Stokes Something",
-    line2: "Else",
+    line1: "Stokes",
+    line2: "Something Else",
   });
   assert.deepEqual(linesFor({ name: "NATURELLA. 12PC. DINNERWARE. BEIGE" }), {
-    line1: "NATURELLA. 12PC.",
-    line2: "DINNERWARE. BEIGE",
+    line1: "NATURELLA.",
+    line2: "12PC. DINNERWARE. BEIGE",
   });
   for (const name of ["PRIMO-GLASS CONTAINER 1040ML,WITH LID", "LED Glass Mushroom", "T.K Avocado Tool"]) {
     assert.ok(linesFor({ name }).line1, name);
@@ -107,8 +107,8 @@ test("a French title is translated to English before the split", () => {
     line2: "Opener",
   });
   assert.deepEqual(linesFor({ name: "Savon à mains parfumé au fruit du dragon, 500 ml" }), {
-    line1: "hand soap scented",
-    line2: "with dragon fruit, 500 ml",
+    line1: "hand soap",
+    line2: "scented with dragon fruit, 500 ml",
   });
   assert.notEqual(linesFor({ name: "BOUGIE PARFUM" }).line1, "");
 });

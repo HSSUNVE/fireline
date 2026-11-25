@@ -3,29 +3,27 @@
 
 import JSZip from "jszip";
 
-export const TAGS_PER_SHEET = 18;
+export const TAGS_PER_SHEET = 16;
 
-/** Left tag, then right tag, band by band. Spacer rows are not even. */
-export const SLOTS = [
-  { line1: "B1", line2: "B2", dollars: "C3", cents: "D3", tag: "B4" },
-  { line1: "F1", line2: "F2", dollars: "G3", cents: "H3", tag: "F4" },
-  { line1: "B6", line2: "B7", dollars: "C8", cents: "D8", tag: "B9" },
-  { line1: "F6", line2: "F7", dollars: "G8", cents: "H8", tag: "F9" },
-  { line1: "B11", line2: "B12", dollars: "C13", cents: "D13", tag: "B14" },
-  { line1: "F11", line2: "F12", dollars: "G13", cents: "H13", tag: "F14" },
-  { line1: "B16", line2: "B17", dollars: "C18", cents: "D18", tag: "B19" },
-  { line1: "F16", line2: "F17", dollars: "G18", cents: "H18", tag: "F19" },
-  { line1: "B21", line2: "B22", dollars: "C23", cents: "D23", tag: "B24" },
-  { line1: "F21", line2: "F22", dollars: "G23", cents: "H23", tag: "F24" },
-  { line1: "B26", line2: "B27", dollars: "C28", cents: "D28", tag: "B29" },
-  { line1: "F26", line2: "F27", dollars: "G28", cents: "H28", tag: "F29" },
-  { line1: "B31", line2: "B32", dollars: "C33", cents: "D33", tag: "B34" },
-  { line1: "F31", line2: "F32", dollars: "G33", cents: "H33", tag: "F34" },
-  { line1: "B35", line2: "B36", dollars: "C37", cents: "D37", tag: "B38" },
-  { line1: "F35", line2: "F36", dollars: "G37", cents: "H37", tag: "F38" },
-  { line1: "B39", line2: "B40", dollars: "C41", cents: "D41", tag: "B42" },
-  { line1: "F39", line2: "F40", dollars: "G41", cents: "H41", tag: "F42" },
-];
+/** Eight bands, left tag then right tag. Each band is four rows. */
+const BAND_ROWS = [1, 5, 9, 13, 17, 21, 25, 29];
+
+export const SLOTS = BAND_ROWS.flatMap((row) => [
+  {
+    line1: `A${row}`,
+    line2: `A${row + 1}`,
+    dollars: `B${row}`,
+    cents: `C${row + 1}`,
+    tag: `A${row + 3}`,
+  },
+  {
+    line1: `D${row}`,
+    line2: `D${row + 1}`,
+    dollars: `E${row}`,
+    cents: `F${row + 1}`,
+    tag: `D${row + 3}`,
+  },
+]);
 
 export function splitRegularPrice(value) {
   if (value == null || value === "") return null;
@@ -72,6 +70,11 @@ function numberCell(ref, style, value) {
   return `<c r="${ref}"${style}><v>${value}</v></c>`;
 }
 
+// The merged price is 38pt. Three digits use the 28pt style so they stay in the column.
+function dollarStyle(style, dollars) {
+  return dollars >= 100 ? ' s="225"' : style;
+}
+
 function tagNumber(value) {
   const text = String(value ?? "").trim();
   if (!/^\d+$/.test(text)) return null;
@@ -92,10 +95,14 @@ function writeSlot(xml, slot, tag) {
 
   const price = tag ? splitRegularPrice(tag.regularPrice) : null;
   next = withCell(next, slot.dollars, (style) =>
-    price ? numberCell(slot.dollars, style, price.dollars) : emptyCell(slot.dollars, style),
+    price
+      ? numberCell(slot.dollars, dollarStyle(style, price.dollars), price.dollars)
+      : emptyCell(slot.dollars, style),
   );
   next = withCell(next, slot.cents, (style) =>
-    price ? numberCell(slot.cents, style, price.cents) : emptyCell(slot.cents, style),
+    price
+      ? textCell(slot.cents, style, String(price.cents).padStart(2, "0"))
+      : emptyCell(slot.cents, style),
   );
 
   const code = tag ? tagNumber(tag.upc) : null;
@@ -135,11 +142,13 @@ async function addSheetParts(zip, count) {
   let rels = await zip.file("xl/_rels/workbook.xml.rels").async("string");
   let types = await zip.file("[Content_Types].xml").async("string");
   let app = await zip.file("docProps/app.xml").async("string");
-  const sheetRels = await zip.file("xl/worksheets/_rels/sheet1.xml.rels").async("string");
+  const relsFile = zip.file("xl/worksheets/_rels/sheet1.xml.rels");
+  const sheetRels = relsFile ? await relsFile.async("string") : null;
 
   const sheetTags = [];
   const relationships = [];
   const overrides = [];
+  const printAreas = [];
   for (let i = 1; i < count; i += 1) {
     const n = i + 1;
     const rid = `rId${5 + i}`;
@@ -150,11 +159,18 @@ async function addSheetParts(zip, count) {
     overrides.push(
       `<Override PartName="/xl/worksheets/sheet${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
     );
-    zip.file(`xl/worksheets/_rels/sheet${n}.xml.rels`, sheetRels);
+    printAreas.push(
+      `<definedName name="_xlnm.Print_Area" localSheetId="${i}">Sheet${n}!$A$1:$F$32</definedName>`,
+    );
+    if (sheetRels) zip.file(`xl/worksheets/_rels/sheet${n}.xml.rels`, sheetRels);
   }
 
   if (!workbook.includes("</sheets>")) throw new Error("Workbook has no sheets list");
   workbook = workbook.replace("</sheets>", `${sheetTags.join("")}</sheets>`);
+  if (printAreas.length > 0) {
+    if (!workbook.includes("</definedNames>")) throw new Error("Workbook has no print area");
+    workbook = workbook.replace("</definedNames>", `${printAreas.join("")}</definedNames>`);
+  }
   rels = rels.replace("</Relationships>", `${relationships.join("")}</Relationships>`);
   types = types.replace("</Types>", `${overrides.join("")}</Types>`);
 

@@ -31,4 +31,4 @@ Use Cloudflare Pages on the free plan. Do not add a credit card. A `pages.dev` a
 6. Leave environment variables empty. Do not paste an Adobe key. The proxy is `functions/api/lookup.js`, and Pages serves it on the same hostname as the site.
 7. Deploy. Open the `https://….pages.dev` link in Safari on the iPhone, allow the camera, then Share → **Add to Home Screen**.
 
-The workbook he downloads is a filled copy of `template/petites-affiches.xlsx`. Line 1 and line 2 keep the fonts already in that file. More than 18 selected tags adds another sheet copied from that template.
+The workbook he downloads is a filled copy of `template/petites-affiches.xlsx`. Line 1 and line 2 keep the fonts already in that file. More than 16 selected tags adds another sheet copied from that template.

@@ -3,23 +3,17 @@
 
 const CULIN_LINE_1 = "Culin Air";
 const CULIN_LINE_2 = "Digital Air Fryer 3.8 L, 1350 W";
-const CANDLE_NAME = "SCENTED CANDLE BLACK VASE H23CM";
 const DINNERWARE_LINE_2 = "12 pc dinner ware";
 
-// Column F in petites-affiches.xlsx. It is the narrower tag, so text that
-// fits here also fits on the wider left tag. Excel's width is how many
-// Calibri 11 digits ("0") fit in the cell.
-const NARROW_COLUMN = 35.26953125;
-const CALIBRI_ZERO = 1038;
-
-// Bold Calibri 24 advances in font units. Carlito Bold uses Calibri's metrics.
+// Column D is the narrower description. Its width is 209px. Line 1 is Arial
+// Bold 18. These advances are Liberation Sans Bold, which matches Arial.
 // Index is the character code minus 32. 0 means the font has no such glyph.
 const ADVANCE = [
-  463,667,898,1020,1038,1493,1443,478,638,638,1020,1020,528,627,547,880,1038,1038,1038,1038,1038,1038,1038,1038,1038,1038,565,565,1020,1020,1020,949,1840,1241,1148,1084,1291,999,940,1305,1292,546,678,1120,866,1790,1349,1385,1090,1405,1153,968,1014,1337,1211,1856,1128,1064,979,665,880,665,1020,1020,615,1011,1099,857,1099,1031,648,971,1099,503,523,983,503,1666,1099,1101,1099,1099,728,817,710,1099,969,1526,941,970,814,704,973,704,1020,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,463,667,1020,1038,1020,1038,1020,1020,849,1709,852,1103,1020,0,1038,799,701,1020,692,688,616,1154,1224,548,621,517,891,1103,1347,1415,1437,949,1241,1241,1241,1241,1241,1241,1588,1084,999,999,999,999,546,546,546,546,1309,1349,1385,1385,1385,1385,1385,1020,1394,1337,1337,1337,1337,1064,1090,1136,1011,1011,1011,1011,1011,1011,1587,857,1031,1031,1031,1031,503,503,503,503,1099,1099,1101,1101,1101,1101,1101,1020,1114,1099,1099,1099,1099,970,1099,970,
+  569,682,971,1139,1139,1821,1479,487,682,682,797,1196,569,682,569,569,1139,1139,1139,1139,1139,1139,1139,1139,1139,1139,682,682,1196,1196,1196,1251,1997,1479,1479,1479,1479,1366,1251,1593,1479,569,1139,1479,1251,1706,1479,1593,1366,1593,1479,1366,1251,1479,1366,1933,1366,1366,1251,682,569,682,1196,1139,682,1139,1251,1139,1251,1139,682,1251,1251,569,569,1139,569,1821,1251,1251,1251,1251,797,1139,682,1251,1139,1593,1139,1139,1024,797,573,797,1196,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,569,682,1139,1139,1139,1139,573,1139,682,1509,758,1139,1196,682,1509,1131,819,1124,682,682,682,1180,1139,682,682,682,748,1139,1708,1708,1708,1251,1479,1479,1479,1479,1479,1479,2048,1479,1366,1366,1366,1366,569,569,569,569,1479,1479,1593,1593,1593,1593,1593,1196,1593,1479,1479,1479,1479,1366,1366,1251,1139,1139,1139,1139,1139,1139,1821,1139,1139,1139,1139,1139,569,569,569,569,1251,1251,1251,1251,1251,1251,1251,1124,1251,1251,1251,1251,1251,1139,1251,1139,
 ];
-const WIDE = 1856;
-// Same design units as the advances above, scaled from Calibri 11 to 24 pt.
-const LINE_1_LIMIT = NARROW_COLUMN * CALIBRI_ZERO * (11 / 24);
+const WIDE = 2048;
+// 18pt at 96dpi, minus the cell padding, in the font's own units.
+const LINE_1_LIMIT = ((209 - 8) * 2048) / 24;
 
 const FRENCH_PHRASES = [
   ["parfum d'intérieur", "home fragrance"],
@@ -118,11 +112,6 @@ function dinnerwareLines(name) {
   return { line1: match[1].trim(), line2: DINNERWARE_LINE_2 };
 }
 
-function candleLines(name) {
-  if (name.toUpperCase() !== CANDLE_NAME) return null;
-  return { line1: "SCENTED CANDLE", line2: "BLACK VASE H23CM" };
-}
-
 function isCulinAir(product) {
   if (String(product?.sku ?? "") === "880369834412") return true;
   const name = normalizeSpaces(product?.name).toLowerCase();
@@ -162,5 +151,5 @@ export function linesFor(product) {
   const raw = normalizeSpaces(product?.name);
   if (!raw) return emptyLines();
   const name = toEnglish(raw);
-  return dinnerwareLines(name) || candleLines(name) || wrapToTag(thinkKitchenText(name) || name);
+  return dinnerwareLines(name) || wrapToTag(thinkKitchenText(name) || name);
 }
